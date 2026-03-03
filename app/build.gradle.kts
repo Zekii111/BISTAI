@@ -95,5 +95,5 @@ dependencies {
 
 
     // Google AI (Gemini) SDK
-    implementation("com.google.ai.client.generativeai:generativeai:0.8.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }
