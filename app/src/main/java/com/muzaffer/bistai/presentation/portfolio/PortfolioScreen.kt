@@ -10,12 +10,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,16 +77,36 @@ fun PortfolioScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                // Yıldız (favori filtresi) butonu
-                val starColor = if (uiState.showOnlyFavorites) GoldAccent else SlateBlue
-                IconButton(
-                    onClick = { viewModel.toggleFavoriteFilter() },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (uiState.showOnlyFavorites) GoldAccent.copy(alpha = 0.15f) else NavyBlueSurface,
-                        contentColor   = starColor
-                    )
-                ) {
-                    Icon(Icons.Default.Star, contentDescription = "Sadece favoriler")
+                // Yıldız filtresi butonu — animasyonlu aktif/pasif durumu
+                Box {
+                    IconButton(
+                        onClick = { viewModel.toggleFavoriteFilter() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (uiState.showOnlyFavorites) GoldAccent.copy(alpha = 0.18f) else NavyBlueSurface,
+                            contentColor   = if (uiState.showOnlyFavorites) GoldAccent else SlateBlue
+                        )
+                    ) {
+                        AnimatedContent(
+                            targetState = uiState.showOnlyFavorites,
+                            transitionSpec = { scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut() },
+                            label = "star_anim"
+                        ) { active ->
+                            Icon(
+                                imageVector = if (active) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                                contentDescription = "Favori Filtresi"
+                            )
+                        }
+                    }
+                    // "Filtreli" badge — sadece aktifken görünür
+                    if (uiState.showOnlyFavorites) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.TopEnd).offset(x = (-2).dp, y = 2.dp),
+                            shape = RoundedCornerShape(4.dp),
+                            color = GoldAccent
+                        ) {
+                            Text("ON", color = PureBlack, fontSize = 7.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                        }
+                    }
                 }
             }
 
@@ -185,7 +207,7 @@ private fun StockList(
     onFavoriteToggle: (String, String) -> Unit
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {

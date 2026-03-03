@@ -48,6 +48,7 @@ class StockDetailViewModel @Inject constructor(
             aiService.analyzeStock(symbol)
                 .onSuccess { text ->
                     _uiState.update { it.copy(isLoading = false, analysis = text) }
+                    updateChatGreeting(symbol, isError = false)
                 }
                 .onFailure { error ->
                     val msg = when {
@@ -57,28 +58,45 @@ class StockDetailViewModel @Inject constructor(
                         else -> "Analiz şu an yapılamıyor. Lütfen daha sonra tekrar deneyin."
                     }
                     _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
+                    updateChatGreeting(symbol, isError = true)
                 }
         }
     }
 
-    /** Gemini sohbet oturumunu başlatır. API anahtarı yoksa sessizce atlar. */
+    /** Gemini sohbet oturumunu başlatır. Analiz durumuna göre karşılama mesajı ayarlanır. */
     private fun initChat(symbol: String) {
         if (!aiService.isApiKeySet) return
         try {
             chat = aiService.startStockChat(symbol)
-            // Gemini açılış mesajını chat geçmişine ekle
+            // Karşılama mesajı analiz tamamlanınca güncellenecek — başlangıçta bekle
             _uiState.update {
                 it.copy(
                     chatMessages = listOf(
                         ChatMessage(
-                            text = "Merhaba! **$symbol** hakkında her sorunuzu yanıtlamaya hazırım. Ne merak ediyorsunuz?",
+                            text = "**$symbol** analizi yüklenirken bekleyin, ardından sohbet başlayacak...",
                             isFromUser = false
                         )
                     )
                 )
             }
         } catch (e: Exception) {
-            // Sohbet başlatılamazsa analiz modundan devam et
+            // Sohbet başlatılamazsa sessizce devam et
+        }
+    }
+
+    /** Analiz sonucuna göre chat karşılama mesajını günceller. */
+    private fun updateChatGreeting(symbol: String, isError: Boolean) {
+        val greetingText = if (isError) {
+            "Analiz şu an yüklenemedi, ancak **$symbol** hakkındaki sorularınızı yanıtlamaya devam edebilirim. Ne öğrenmek istersiniz?"
+        } else {
+            "Analiz hazır! **$symbol** hakkında her sorunuzu yanıtlamaya hazırım. Ne merak ediyorsunuz?"
+        }
+        _uiState.update { state ->
+            val updatedMessages = state.chatMessages.toMutableList()
+            if (updatedMessages.isNotEmpty() && !updatedMessages[0].isFromUser) {
+                updatedMessages[0] = updatedMessages[0].copy(text = greetingText)
+            }
+            state.copy(chatMessages = updatedMessages)
         }
     }
 

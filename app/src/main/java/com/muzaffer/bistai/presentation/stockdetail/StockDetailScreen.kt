@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -110,7 +111,9 @@ fun StockDetailScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(BullishGreen.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
-                            ) { Text("✦", color = BullishGreen, fontSize = 12.sp) }
+                            ) {
+                                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(14.dp))
+                            }
                             Text(
                                 "AI Danışman Sohbeti",
                                 style = MaterialTheme.typography.titleSmall,
@@ -298,7 +301,7 @@ fun AiAnalysisCard(text: String) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(BullishGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                    Text("✦", color = BullishGreen, style = MaterialTheme.typography.bodyMedium)
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = BullishGreen, modifier = Modifier.size(18.dp))
                 }
                 Column {
                     Text("Gemini AI Analizi", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
