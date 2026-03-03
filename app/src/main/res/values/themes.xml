@@ -5,7 +5,9 @@
     <style name="Theme.BISTAI" parent="Theme.SplashScreen">
         <!-- Splash arka planı -->
         <item name="windowSplashScreenBackground">#020C1B</item>
-        <!-- Splash ikonu (adaptif için ayrı drawable kullanılıyor) -->
+        <!-- Splash ikonu arka plan rengi (daire içi) -->
+        <item name="windowSplashScreenIconBackgroundColor">#0D1F3C</item>
+        <!-- Splash ikonu -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
         <!-- Splash sonrası geçilecek tema -->
         <item name="postSplashScreenTheme">@style/Theme.BISTAI.Main</item>
