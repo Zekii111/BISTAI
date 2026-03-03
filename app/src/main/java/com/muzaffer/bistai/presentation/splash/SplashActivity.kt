@@ -244,7 +244,7 @@ fun SplashScreen(onFinished: () -> Unit) {
 
         // Alt logo küçük hint
         Text(
-            text = "by Muzaffer Sarı",
+            text = "by Muzaffer Sarıarslan",
             fontSize = 10.sp,
             color = SlateBlue.copy(alpha = 0.5f),
             modifier = Modifier
