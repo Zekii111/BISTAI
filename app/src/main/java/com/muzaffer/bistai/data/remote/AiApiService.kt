@@ -15,7 +15,7 @@ class AiApiService @Inject constructor() {
 
     private val model by lazy {
         GenerativeModel(
-            modelName = "gemini-2.0-flash",
+            modelName = "gemini-1.5-flash",
             apiKey    = BuildConfig.GEMINI_API_KEY
         )
     }
