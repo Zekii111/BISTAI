@@ -28,7 +28,7 @@ class AiApiService @Inject constructor() {
     companion object {
         private const val TAG      = "BISTAI_AI"
         private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-        private const val MODEL    = "gemini-2.0-flash-exp"   // v1beta'da çalışan model
+        private const val MODEL    = "gemini-flash-latest"   // ← senin curl komutundakiyle aynı
     }
 
     private val client = OkHttpClient.Builder()
