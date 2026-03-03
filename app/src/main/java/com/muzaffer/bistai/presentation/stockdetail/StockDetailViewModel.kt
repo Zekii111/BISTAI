@@ -3,8 +3,8 @@ package com.muzaffer.bistai.presentation.stockdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.client.generativeai.Chat
 import com.muzaffer.bistai.data.remote.AiApiService
+import com.muzaffer.bistai.data.remote.SimpleChat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,8 +31,8 @@ class StockDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(StockDetailUiState())
     val uiState: StateFlow<StockDetailUiState> = _uiState.asStateFlow()
 
-    /** Aktif Gemini sohbet oturumu (nullable — API anahtarı yoksa oluşturulmaz). */
-    private var chat: Chat? = null
+    /** Aktif sohbet oturumu (nullable — API anahtarı yoksa oluşturulmaz). */
+    private var chat: SimpleChat? = null
 
     init {
         val symbol = savedStateHandle.get<String>("symbol") ?: ""
