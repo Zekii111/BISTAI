@@ -3,21 +3,17 @@
 
     <!-- Ana tema — tam ekran, eylem çubuğu yok -->
     <style name="Theme.BISTAI" parent="Theme.SplashScreen">
-        <!-- Splash arka planı -->
         <item name="windowSplashScreenBackground">#020C1B</item>
-        <!-- Splash ikonu arka plan rengi (daire içi) -->
-        <item name="windowSplashScreenIconBackgroundColor">#0D1F3C</item>
-        <!-- Splash ikonu -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
-        <!-- Splash sonrası geçilecek tema -->
         <item name="postSplashScreenTheme">@style/Theme.BISTAI.Main</item>
     </style>
 
-    <!-- Splash bittikten sonra uygulanan asıl tema -->
+    <!-- Splash bittikten sonra ve SplashActivity için kullanılan tema -->
     <style name="Theme.BISTAI.Main" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#020C1B</item>
         <item name="android:statusBarColor">#020C1B</item>
         <item name="android:navigationBarColor">#020C1B</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
     </style>
 
 </resources>
