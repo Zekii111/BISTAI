@@ -1,39 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Uygulama ikonu ön yüzü — Yeşil trend oku ile B harfi -->
+<!--
+  BISTAI Adaptif İkon — Foreground Katmanı (V1.3)
+  Boyut: 108×108dp (72×72dp güvenli alan merkez)
+  Tasarım: Stylize "B" harfi + Bullish Green yükselen trend oku
+  Arka plan: Ayrı ic_launcher_background.xml (#020C1B lacivert)
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Yeşil yükselen trend çizgisi -->
+    <!-- ═══ BEYAZ "B" HARFİ — Güvenli alanda merkez (27-81 arası) ═══ -->
+
+    <!-- B gövdesi — dikey çubuk -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,26 L32,82 L38,82 L38,26 Z"/>
+
+    <!-- B üst yuvarlak (üst yarım daire) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,26 L38,54 Q38,26 60,26 Q76,26 76,40 Q76,54 60,54 L38,54 Z M38,28 L58,28 Q72,28 72,40 Q72,52 58,52 L38,52 Z"/>
+
+    <!-- B alt yuvarlak (alt yarım daire — daha büyük ve cesur) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,54 L38,82 Q38,54 62,54 Q80,54 80,68 Q80,82 62,82 L38,82 Z M38,56 L60,56 Q76,56 76,68 Q76,80 60,80 L38,80 Z"/>
+
+    <!-- ═══ YEŞİL TREND OKUNUM — Sağ üst köşe ═══ -->
+
+    <!-- Trend çizgisi: sol-aşağıdan sağ-yukarıya -->
     <path
         android:strokeColor="#00C853"
-        android:strokeWidth="5"
+        android:strokeWidth="4"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:fillColor="#00000000"
-        android:pathData="M20,78 L38,55 L54,64 L82,30"/>
-    <!-- Ok ucu -->
+        android:pathData="M60,75 L68,62 L75,68 L83,50"/>
+
+    <!-- Ok ucu (sağ üst) -->
     <path
         android:fillColor="#00C853"
-        android:pathData="M82,30 L72,33 L79,40 Z"/>
+        android:pathData="M83,50 L76,54 L79,61 Z"/>
 
-    <!-- B Harfi — Bold Beyaz -->
+    <!-- Altın nokta (trend başlangıcı) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,38 L30,70
-                          L30,38 Q30,38 46,38 Q58,38 58,48 Q58,54 51,57
-                          Q61,60 61,67 Q61,78 46,78 L30,78 Z
-                          M38,45 L38,54 L46,54 Q52,54 52,50 Q52,45 46,45 Z
-                          M38,61 L38,71 L46,71 Q54,71 54,66 Q54,61 46,61 Z"/>
-
-    <!-- Altın alt çizgi (aksan) -->
-    <path
-        android:strokeColor="#FFC107"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M26,84 L82,84"/>
+        android:fillColor="#FFC107"
+        android:pathData="M60,75 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0"/>
 
 </vector>

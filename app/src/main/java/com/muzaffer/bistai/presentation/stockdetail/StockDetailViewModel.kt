@@ -51,11 +51,20 @@ class StockDetailViewModel @Inject constructor(
                     updateChatGreeting(symbol, isError = false)
                 }
                 .onFailure { error ->
+                    // AiApiService.parseApiError() zaten spesifik Türkçe mesaj üretir
                     val msg = when {
-                        error.message == "API_KEY_MISSING"  -> "Gemini API anahtarı tanımlı değil."
-                        error.message?.contains("network", ignoreCase = true) == true ->
-                            "İnternet bağlantısı kurulamadı."
-                        else -> "Analiz şu an yapılamıyor. Lütfen daha sonra tekrar deneyin."
+                        error.message == "API_KEY_MISSING" ->
+                            "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... satırını ekleyin."
+                        error.message?.startsWith("API_KEY_INVALID") == true ||
+                        error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
+                            (error.message ?: "") +
+                            "\n\n💡 Çözüm: aistudio.google.com adresine gidip yeni bir\nAPI key oluşturun ve local.properties'e yapıştırın."
+                        error.message?.startsWith("QUOTA_EXCEEDED") == true ->
+                            "Günlük kota aşıldı. Birkaç dakika bekleyip tekrar deneyin."
+                        error.message?.contains("Unable to resolve host") == true ||
+                        error.message?.contains("timeout") == true ->
+                            "İnternet bağlantısı kurulamadı. Ağ bağlantınızı kontrol edin."
+                        else -> error.message ?: "Analiz şu an yapılamıyor."
                     }
                     _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
                     updateChatGreeting(symbol, isError = true)
