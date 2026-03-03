@@ -13,23 +13,30 @@ import kotlin.random.Random
  */
 class FakeStockDataSource @Inject constructor() {
 
-    // Türkiye'nin en likit BIST hisseleri — başlangıç tabanı
+    // Türkiye'nin en likit BIST hisseleri + Altın/Gümüş/Kripto/Döviz
     private val baseStocks = listOf(
-        Triple("THYAO", "Türk Hava Yolları", 285.50),
-        Triple("GARAN", "Garanti BBVA", 102.30),
-        Triple("SISE",  "Şişe Cam",         48.70),
-        Triple("YKBNK", "Yapı Kredi Bankası",21.60),
-        Triple("KCHOL", "Koç Holding",      195.40),
-        Triple("EREGL", "Ereğli Demir Çelik",52.80),
-        Triple("AKBNK", "Akbank",            37.20),
-        Triple("ASELS", "Aselsan",          100.50),
-        Triple("BIMAS", "BİM Birleşik Mağazalar", 492.00),
-        Triple("TUPRS", "Tüpraş",           189.90),
-        Triple("PGSUS", "Pegasus Hava Yolları", 1120.00),
-        Triple("TOASO", "Tofaş Oto Fabrikalası", 247.00),
-        Triple("FROTO", "Ford Otosan",       1034.50),
-        Triple("SAHOL", "Sabancı Holding",    88.10),
-        Triple("TAVHL", "TAV Havalimanları",  135.70)
+        Triple("THYAO", "Türk Hava Yolları",           285.50),
+        Triple("GARAN", "Garanti BBVA",                102.30),
+        Triple("SISE",  "Şişe Cam",                     48.70),
+        Triple("YKBNK", "Yapı Kredi Bankası",           21.60),
+        Triple("KCHOL", "Koç Holding",                 195.40),
+        Triple("EREGL", "Ereğli Demir Çelik",           52.80),
+        Triple("AKBNK", "Akbank",                       37.20),
+        Triple("ASELS", "Aselsan",                     100.50),
+        Triple("BIMAS", "BİM Birleşik Mağazalar",      492.00),
+        Triple("TUPRS", "Tüpraş",                      189.90),
+        Triple("PGSUS", "Pegasus Hava Yolları",       1120.00),
+        Triple("TOASO", "Tofaş Otomobil",              247.00),
+        Triple("FROTO", "Ford Otosan",                1034.50),
+        Triple("SAHOL", "Sabancı Holding",               88.10),
+        Triple("TAVHL", "TAV Havalimanları",            135.70),
+        // ─── Emtia ──────────────────────────────────────────────────
+        Triple("ALTIN",  "Altın (TL/Gram)",            3_180.0),
+        Triple("GUMUS",  "Gümüş (TL/Gram)",               33.5),
+        // ─── Kripto ─────────────────────────────────────────────────
+        Triple("BTCUSD", "Bitcoin / USD",            68_500.0),
+        // ─── Döviz ──────────────────────────────────────────────────
+        Triple("USDTRY", "Dolar / Türk Lirası",          36.20)
     )
 
     /**

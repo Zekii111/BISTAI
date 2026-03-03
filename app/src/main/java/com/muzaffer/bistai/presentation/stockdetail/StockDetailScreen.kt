@@ -76,6 +76,13 @@ fun StockDetailScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // AI Tahmin Kartı — listenin en üstünde
+                item {
+                    uiState.prediction?.let { pred ->
+                        AiPredictionCard(prediction = pred)
+                    }
+                }
+
                 // Sembol rozeti
                 item { SymbolBadge(symbol = symbol) }
 
@@ -293,7 +300,72 @@ private fun SymbolBadge(symbol: String) {
     }
 }
 
-// ─── Analysis Cards ──────────────────────────────────────────────────────────
+// ─── AI Prediction Card ─────────────────────────────────────────────────────
+
+@Composable
+fun AiPredictionCard(prediction: com.muzaffer.bistai.domain.model.AiPrediction) {
+    val trend = prediction.trend
+    val trendColor = when (trend) {
+        com.muzaffer.bistai.domain.model.Trend.BULLISH -> BullishGreen
+        com.muzaffer.bistai.domain.model.Trend.BEARISH -> BearishRed
+        com.muzaffer.bistai.domain.model.Trend.NEUTRAL -> GoldAccent
+    }
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = NavyBlueSurface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // ── Başlık ──────────────────────────────────────────────────
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GoldAccent, modifier = Modifier.size(18.dp))
+                    Text("Medyum AI Tahmini", style = MaterialTheme.typography.titleSmall, color = White, fontWeight = FontWeight.Bold)
+                }
+                Surface(shape = RoundedCornerShape(8.dp), color = trendColor.copy(alpha = 0.15f)) {
+                    Text(
+                        "${trend.emoji} ${trend.label}",
+                        color = trendColor, fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            HorizontalDivider(color = NavyBlueMedium)
+            // ── Güven Skoru ─────────────────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Yapay Zeka Güven Skoru", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
+                    Text("%${prediction.confidenceScore}", style = MaterialTheme.typography.labelSmall, color = trendColor, fontWeight = FontWeight.Bold)
+                }
+                LinearProgressIndicator(
+                    progress = { prediction.confidenceScore / 100f },
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).height(6.dp),
+                    color = trendColor,
+                    trackColor = NavyBlueMedium
+                )
+            }
+            // ── Hedef Fiyat ──────────────────────────────────────────────
+            if (prediction.targetLow > 0 || prediction.targetHigh > 0) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Tahmini Hedef Aralık", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
+                    Text(
+                        "${prediction.targetLow} — ${prediction.targetHigh}",
+                        style = MaterialTheme.typography.labelMedium, color = White, fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            // ── Gerekçe ──────────────────────────────────────────────────
+            Surface(shape = RoundedCornerShape(10.dp), color = trendColor.copy(alpha = 0.06f)) {
+                Text(
+                    prediction.reasoning,
+                    style = MaterialTheme.typography.bodySmall, color = LightSlate, lineHeight = 20.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun AiAnalysisCard(text: String) {

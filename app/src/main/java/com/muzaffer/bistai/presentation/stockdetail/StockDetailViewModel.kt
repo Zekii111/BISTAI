@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
+import com.muzaffer.bistai.domain.model.AiPrediction
+import com.muzaffer.bistai.domain.repository.NewsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,24 +16,25 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class StockDetailUiState(
-    val symbol: String        = "",
-    val isLoading: Boolean    = false,
-    val analysis: String?     = null,
-    val errorMessage: String? = null,
+    val symbol: String              = "",
+    val isLoading: Boolean          = false,
+    val analysis: String?           = null,
+    val prediction: AiPrediction?   = null,   // ← Medyum AI tahmini
+    val errorMessage: String?       = null,
     val chatMessages: List<ChatMessage> = emptyList(),
-    val isChatLoading: Boolean = false
+    val isChatLoading: Boolean      = false
 )
 
 @HiltViewModel
 class StockDetailViewModel @Inject constructor(
     private val aiService: AiApiService,
+    private val newsRepository: NewsRepository,   // ← FakeNewsDataSource → gerçek API'ye hazır
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StockDetailUiState())
     val uiState: StateFlow<StockDetailUiState> = _uiState.asStateFlow()
 
-    /** Aktif sohbet oturumu (nullable — API anahtarı yoksa oluşturulmaz). */
     private var chat: SimpleChat? = null
 
     init {
@@ -41,29 +44,41 @@ class StockDetailViewModel @Inject constructor(
         initChat(symbol)
     }
 
-    /** Hisse için tek seferlik analiz üretir. */
+    /**
+     * Medyum AI analizi: haber + makro bağlam ile zenginleştirilmiş tahmin üretir.
+     */
     fun fetchAnalysis(symbol: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, analysis = null) }
-            aiService.analyzeStock(symbol)
-                .onSuccess { text ->
-                    _uiState.update { it.copy(isLoading = false, analysis = text) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, analysis = null, prediction = null) }
+
+            val news  = newsRepository.getNewsForAsset(symbol)
+            val macro = newsRepository.getMacroContext()
+
+            aiService.analyzeAsset(symbol = symbol, newsItems = news, macroContext = macro)
+                .onSuccess { prediction ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading  = false,
+                            prediction = prediction,
+                            analysis   = prediction.reasoning    // Kısa özet metin olarak da kay
+                        )
+                    }
                     updateChatGreeting(symbol, isError = false)
+                    // Chat'i tahmin bağlamıyla yeniden başlat
+                    chat = aiService.startStockChat(symbol, prediction)
                 }
                 .onFailure { error ->
-                    // AiApiService.parseApiError() zaten spesifik Türkçe mesaj üretir
                     val msg = when {
                         error.message == "API_KEY_MISSING" ->
-                            "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... satırını ekleyin."
+                            "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... ekleyin."
                         error.message?.startsWith("API_KEY_INVALID") == true ||
                         error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
-                            (error.message ?: "") +
-                            "\n\n💡 Çözüm: aistudio.google.com adresine gidip yeni bir\nAPI key oluşturun ve local.properties'e yapıştırın."
+                            "${error.message}\n\n💡 aistudio.google.com adresinden yeni key alın."
                         error.message?.startsWith("QUOTA_EXCEEDED") == true ->
-                            "Günlük kota aşıldı. Birkaç dakika bekleyip tekrar deneyin."
+                            "Günlük kota aşıldı. Birkaç dakika bekleyin."
                         error.message?.contains("Unable to resolve host") == true ||
                         error.message?.contains("timeout") == true ->
-                            "İnternet bağlantısı kurulamadı. Ağ bağlantınızı kontrol edin."
+                            "İnternet bağlantısı kurulamadı."
                         else -> error.message ?: "Analiz şu an yapılamıyor."
                     }
                     _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
@@ -72,65 +87,51 @@ class StockDetailViewModel @Inject constructor(
         }
     }
 
-    /** Gemini sohbet oturumunu başlatır. Analiz durumuna göre karşılama mesajı ayarlanır. */
     private fun initChat(symbol: String) {
         if (!aiService.isApiKeySet) return
         try {
             chat = aiService.startStockChat(symbol)
-            // Karşılama mesajı analiz tamamlanınca güncellenecek — başlangıçta bekle
             _uiState.update {
                 it.copy(
                     chatMessages = listOf(
                         ChatMessage(
-                            text = "**$symbol** analizi yüklenirken bekleyin, ardından sohbet başlayacak...",
+                            text = "**$symbol** analizi yükleniyor, ardından sorularınızı yanıtlayacağım...",
                             isFromUser = false
                         )
                     )
                 )
             }
-        } catch (e: Exception) {
-            // Sohbet başlatılamazsa sessizce devam et
-        }
+        } catch (_: Exception) {}
     }
 
-    /** Analiz sonucuna göre chat karşılama mesajını günceller. */
     private fun updateChatGreeting(symbol: String, isError: Boolean) {
-        val greetingText = if (isError) {
-            "Analiz şu an yüklenemedi, ancak **$symbol** hakkındaki sorularınızı yanıtlamaya devam edebilirim. Ne öğrenmek istersiniz?"
-        } else {
-            "Analiz hazır! **$symbol** hakkında her sorunuzu yanıtlamaya hazırım. Ne merak ediyorsunuz?"
-        }
+        val text = if (isError)
+            "Analiz yüklenemedi, ancak **$symbol** hakkında sorularınızı yanıtlamaya devam edebilirim."
+        else
+            "Analiz tamamlandı! **$symbol** için tahminim ve gerekçem hazır. Detaylarını sormak ister misin?"
+
         _uiState.update { state ->
-            val updatedMessages = state.chatMessages.toMutableList()
-            if (updatedMessages.isNotEmpty() && !updatedMessages[0].isFromUser) {
-                updatedMessages[0] = updatedMessages[0].copy(text = greetingText)
+            val updated = state.chatMessages.toMutableList()
+            if (updated.isNotEmpty() && !updated[0].isFromUser) {
+                updated[0] = updated[0].copy(text = text)
             }
-            state.copy(chatMessages = updatedMessages)
+            state.copy(chatMessages = updated)
         }
     }
 
-    /** Kullanıcı mesajını gönderir ve Gemini yanıtını alır. */
     fun sendChatMessage(message: String) {
         val currentChat = chat ?: return
         if (message.isBlank()) return
-
-        val userMsg = ChatMessage(text = message, isFromUser = true)
+        val userMsg    = ChatMessage(text = message, isFromUser = true)
         val loadingMsg = ChatMessage(text = "...", isFromUser = false, isLoading = true, id = -1L)
-
-        _uiState.update {
-            it.copy(
-                chatMessages = it.chatMessages + userMsg + loadingMsg,
-                isChatLoading = true
-            )
-        }
-
+        _uiState.update { it.copy(chatMessages = it.chatMessages + userMsg + loadingMsg, isChatLoading = true) }
         viewModelScope.launch {
             aiService.sendMessage(currentChat, message)
                 .onSuccess { reply ->
                     _uiState.update {
                         it.copy(
-                            chatMessages = it.chatMessages
-                                .filter { m -> !m.isLoading } + ChatMessage(text = reply, isFromUser = false),
+                            chatMessages = it.chatMessages.filter { m -> !m.isLoading } +
+                                    ChatMessage(text = reply, isFromUser = false),
                             isChatLoading = false
                         )
                     }
@@ -138,11 +139,8 @@ class StockDetailViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
-                            chatMessages = it.chatMessages
-                                .filter { m -> !m.isLoading } + ChatMessage(
-                                    text = "Yanıt alınamadı: ${error.message ?: "bilinmeyen hata"}",
-                                    isFromUser = false
-                                ),
+                            chatMessages = it.chatMessages.filter { m -> !m.isLoading } +
+                                    ChatMessage(text = "Yanıt alınamadı: ${error.message}", isFromUser = false),
                             isChatLoading = false
                         )
                     }
