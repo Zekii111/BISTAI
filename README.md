@@ -59,7 +59,6 @@
 ### Gereksinimler
 - Android Studio Hedgehog veya üstü
 - Android SDK 26+
-- Gemini API Key ([aistudio.google.com](https://aistudio.google.com/app/apikey) üzerinden ücretsiz alın)
 
 ### Adımlar
 
