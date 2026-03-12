@@ -10,14 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,10 +42,9 @@ fun PortfolioScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
-    // Arama + favori filtresi
-    val filteredStocks = remember(uiState.stocks, uiState.favoriteSymbols, uiState.showOnlyFavorites, searchQuery) {
+    // Arama filtresi
+    val filteredStocks = remember(uiState.stocks, searchQuery) {
         var list = uiState.stocks
-        if (uiState.showOnlyFavorites) list = list.filter { it.symbol in uiState.favoriteSymbols }
         if (searchQuery.isNotBlank()) list = list.filter {
             it.symbol.contains(searchQuery, ignoreCase = true) ||
             it.name.contains(searchQuery, ignoreCase = true)
@@ -64,51 +60,14 @@ fun PortfolioScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             PortfolioTopBar(onRefreshClick = { viewModel.refresh() })
 
-            // ── Arama + Favori Toggle ────────────────────────────────────
-            Row(
+            // ── Arama ────────────────────────────────────────────────
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                // Yıldız filtresi butonu — animasyonlu aktif/pasif durumu
-                Box {
-                    IconButton(
-                        onClick = { viewModel.toggleFavoriteFilter() },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (uiState.showOnlyFavorites) GoldAccent.copy(alpha = 0.18f) else NavyBlueSurface,
-                            contentColor   = if (uiState.showOnlyFavorites) GoldAccent else SlateBlue
-                        )
-                    ) {
-                        AnimatedContent(
-                            targetState = uiState.showOnlyFavorites,
-                            transitionSpec = { scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut() },
-                            label = "star_anim"
-                        ) { active ->
-                            Icon(
-                                imageVector = if (active) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                                contentDescription = "Favori Filtresi"
-                            )
-                        }
-                    }
-                    // "Filtreli" badge — sadece aktifken görünür
-                    if (uiState.showOnlyFavorites) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopEnd).offset(x = (-2).dp, y = 2.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = GoldAccent
-                        ) {
-                            Text("ON", color = PureBlack, fontSize = 7.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
-                        }
-                    }
-                }
-            }
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+            )
 
             // ── İçerik ──────────────────────────────────────────────────
             Box(modifier = Modifier.fillMaxSize()) {
@@ -120,11 +79,10 @@ fun PortfolioScreen(
                     )
                     uiState.isEmpty   -> EmptyState()
                     else              -> StockList(
-                        stocks         = filteredStocks,
-                        searchQuery    = searchQuery,
-                        showOnlyFavs   = uiState.showOnlyFavorites,
-                        favoriteSymbols = uiState.favoriteSymbols,
-                        onStockClick   = onStockClick,
+                        stocks           = filteredStocks,
+                        searchQuery      = searchQuery,
+                        favoriteSymbols  = uiState.favoriteSymbols,
+                        onStockClick     = onStockClick,
                         onFavoriteToggle = { symbol, name ->
                             viewModel.toggleFavorite(symbol, name)
                         }
@@ -201,7 +159,6 @@ private fun PortfolioTopBar(onRefreshClick: () -> Unit) {
 private fun StockList(
     stocks: List<Stock>,
     searchQuery: String,
-    showOnlyFavs: Boolean,
     favoriteSymbols: Set<String>,
     onStockClick: (String) -> Unit,
     onFavoriteToggle: (String, String) -> Unit
@@ -211,17 +168,15 @@ private fun StockList(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            val label = when {
-                showOnlyFavs && stocks.isEmpty() -> "Henüz favori eklenmedi ⭐"
-                showOnlyFavs -> "Favorilerim  •  ${stocks.size} Hisse"
-                searchQuery.isNotBlank() -> "\"$searchQuery\" için ${stocks.size} sonuç"
-                else -> "Portföy  •  ${stocks.size} Hisse"
-            }
+            val label = if (searchQuery.isNotBlank())
+                "\"$searchQuery\" için ${stocks.size} sonuç"
+            else
+                "Portföy  •  ${stocks.size} Hisse"
             Text(label, style = MaterialTheme.typography.labelMedium, color = SlateBlue,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         }
 
-        if (stocks.isEmpty() && !showOnlyFavs && searchQuery.isNotBlank()) {
+        if (stocks.isEmpty() && searchQuery.isNotBlank()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
                     Text("\"$searchQuery\" bulunamadı", color = SlateBlue, style = MaterialTheme.typography.bodyLarge)

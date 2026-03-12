@@ -14,11 +14,10 @@ import javax.inject.Inject
 // ─── UI State ────────────────────────────────────────────────────────────────
 
 data class PortfolioUiState(
-    val stocks: List<Stock>         = emptyList(),
-    val isLoading: Boolean          = false,
-    val errorMessage: String?       = null,
-    val favoriteSymbols: Set<String> = emptySet(),
-    val showOnlyFavorites: Boolean  = false
+    val stocks: List<Stock>          = emptyList(),
+    val isLoading: Boolean           = false,
+    val errorMessage: String?        = null,
+    val favoriteSymbols: Set<String> = emptySet()
 ) {
     val hasError: Boolean get() = errorMessage != null
     val isEmpty: Boolean  get() = !isLoading && stocks.isEmpty() && !hasError
@@ -81,11 +80,6 @@ class PortfolioViewModel @Inject constructor(
         viewModelScope.launch {
             watchlistRepository.toggleFavorite(symbol, name)
         }
-    }
-
-    /** Sadece favorileri göster / tümünü göster toggle. */
-    fun toggleFavoriteFilter() {
-        _uiState.update { it.copy(showOnlyFavorites = !it.showOnlyFavorites) }
     }
 
     fun refresh() = loadStocks()

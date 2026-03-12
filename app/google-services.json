@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35415510791",
+    "project_id": "bistai-a5a20",
+    "storage_bucket": "bistai-a5a20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35415510791:android:e0bf632557439a6ec9bfa2",
+        "android_client_info": {
+          "package_name": "com.muzaffer.bistai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmoY7UDJ-xkhx1s1DXq6Hy3SGJjdcW-2w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

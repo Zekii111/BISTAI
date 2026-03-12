@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.muzaffer.bistai" />
+                  <option name="mobileSdkAppId" value="1:35415510791:android:e0bf632557439a6ec9bfa2" />
+                  <option name="projectId" value="bistai-a5a20" />
+                  <option name="projectNumber" value="35415510791" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

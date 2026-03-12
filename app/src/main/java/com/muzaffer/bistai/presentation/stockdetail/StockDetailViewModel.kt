@@ -1,11 +1,14 @@
 package com.muzaffer.bistai.presentation.stockdetail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.muzaffer.bistai.data.remote.AiApiService
 import com.muzaffer.bistai.data.remote.SimpleChat
 import com.muzaffer.bistai.domain.model.AiPrediction
+import com.muzaffer.bistai.domain.repository.AnalysisRepository
+import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.domain.repository.NewsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,19 +19,22 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class StockDetailUiState(
-    val symbol: String              = "",
-    val isLoading: Boolean          = false,
-    val analysis: String?           = null,
-    val prediction: AiPrediction?   = null,   // ← Medyum AI tahmini
-    val errorMessage: String?       = null,
+    val symbol: String                  = "",
+    val isLoading: Boolean              = false,
+    val analysis: String?               = null,
+    val prediction: AiPrediction?       = null,
+    val analysisSource: AnalysisSource? = null,   // 🔥 Firebase / 💾 Yerel / ✨ Taze
+    val analysisAgeMinutes: Long?       = null,   // kaç dakika önce üretildi
+    val errorMessage: String?           = null,
     val chatMessages: List<ChatMessage> = emptyList(),
-    val isChatLoading: Boolean      = false
+    val isChatLoading: Boolean          = false
 )
 
 @HiltViewModel
 class StockDetailViewModel @Inject constructor(
     private val aiService: AiApiService,
-    private val newsRepository: NewsRepository,   // ← FakeNewsDataSource → gerçek API'ye hazır
+    private val newsRepository: NewsRepository,
+    private val analysisRepository: AnalysisRepository,   // ← V2.1: Firebase → API → Room
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -36,6 +42,10 @@ class StockDetailViewModel @Inject constructor(
     val uiState: StateFlow<StockDetailUiState> = _uiState.asStateFlow()
 
     private var chat: SimpleChat? = null
+
+    companion object {
+        private const val TAG = "BISTAI_VM"
+    }
 
     init {
         val symbol = savedStateHandle.get<String>("symbol") ?: ""
@@ -45,45 +55,54 @@ class StockDetailViewModel @Inject constructor(
     }
 
     /**
-     * Medyum AI analizi: haber + makro bağlam ile zenginleştirilmiş tahmin üretir.
+     * V2.1: Firebase → Gemini API → Room cache öncelik sırası.
+     * Tüm kullanıcılar Firebase'deki ortak analizi okur; sadece ilk kullanıcı API çağrısı yapar.
      */
     fun fetchAnalysis(symbol: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, analysis = null, prediction = null) }
+            _uiState.update {
+                it.copy(isLoading = true, errorMessage = null, analysis = null,
+                    prediction = null, analysisSource = null)
+            }
 
             val news  = newsRepository.getNewsForAsset(symbol)
             val macro = newsRepository.getMacroContext()
 
-            aiService.analyzeAsset(symbol = symbol, newsItems = news, macroContext = macro)
-                .onSuccess { prediction ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading  = false,
-                            prediction = prediction,
-                            analysis   = prediction.reasoning    // Kısa özet metin olarak da kay
-                        )
-                    }
-                    updateChatGreeting(symbol, isError = false)
-                    // Chat'i tahmin bağlamıyla yeniden başlat
-                    chat = aiService.startStockChat(symbol, prediction)
+            analysisRepository.getAnalysis(
+                symbol       = symbol,
+                newsItems    = news,
+                macroContext = macro
+            ).onSuccess { (prediction, source, generatedAt) ->
+                val ageMinutes = (System.currentTimeMillis() - generatedAt) / 60_000L
+                Log.d(TAG, "✅ Analiz alındı: $symbol | Kaynak: $source | $ageMinutes dk önce")
+                _uiState.update {
+                    it.copy(
+                        isLoading          = false,
+                        prediction         = prediction,
+                        analysis           = prediction.reasoning,
+                        analysisSource     = source,
+                        analysisAgeMinutes = ageMinutes
+                    )
                 }
-                .onFailure { error ->
-                    val msg = when {
-                        error.message == "API_KEY_MISSING" ->
-                            "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... ekleyin."
-                        error.message?.startsWith("API_KEY_INVALID") == true ||
-                        error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
-                            "${error.message}\n\n💡 aistudio.google.com adresinden yeni key alın."
-                        error.message?.startsWith("QUOTA_EXCEEDED") == true ->
-                            "Günlük kota aşıldı. Birkaç dakika bekleyin."
-                        error.message?.contains("Unable to resolve host") == true ||
-                        error.message?.contains("timeout") == true ->
-                            "İnternet bağlantısı kurulamadı."
-                        else -> error.message ?: "Analiz şu an yapılamıyor."
-                    }
-                    _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
-                    updateChatGreeting(symbol, isError = true)
+                updateChatGreeting(symbol, isError = false)
+                chat = aiService.startStockChat(symbol, prediction)
+            }.onFailure { error ->
+                val msg = when {
+                    error.message == "API_KEY_MISSING" ->
+                        "API anahtarı tanımlı değil. local.properties dosyasına\nGEMINI_API_KEY=... ekleyin."
+                    error.message?.startsWith("API_KEY_INVALID") == true ||
+                    error.message?.startsWith("API_MODEL_NOT_FOUND") == true ->
+                        "${error.message}\n\n💡 aistudio.google.com adresinden yeni key alın."
+                    error.message?.startsWith("QUOTA_EXCEEDED") == true ->
+                        "Günlük kota aşıldı. Birkaç dakika bekleyin."
+                    error.message?.contains("Unable to resolve host") == true ||
+                    error.message?.contains("timeout") == true ->
+                        "İnternet bağlantısı kurulamadı."
+                    else -> error.message ?: "Analiz şu an yapılamıyor."
                 }
+                _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
+                updateChatGreeting(symbol, isError = true)
+            }
         }
     }
 

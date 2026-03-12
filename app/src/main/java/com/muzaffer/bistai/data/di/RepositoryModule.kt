@@ -1,6 +1,8 @@
 package com.muzaffer.bistai.data.di
 
+import com.muzaffer.bistai.data.repository.AnalysisRepositoryImpl
 import com.muzaffer.bistai.data.repository.StockRepositoryImpl
+import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.StockRepository
 import dagger.Binds
 import dagger.Module
@@ -9,8 +11,8 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Hilt modülü — domain katmanındaki abstraction'ı
- * data katmanındaki somut implementasyona bağlar.
+ * Hilt modülü — domain katmanındaki abstraction'ları
+ * data katmanındaki somut implementasyonlara bağlar.
  *
  * [Binds] kullanıldığı için sınıf abstract olmalıdır.
  */
@@ -23,4 +25,10 @@ abstract class RepositoryModule {
     abstract fun bindStockRepository(
         impl: StockRepositoryImpl
     ): StockRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAnalysisRepository(
+        impl: AnalysisRepositoryImpl
+    ): AnalysisRepository
 }

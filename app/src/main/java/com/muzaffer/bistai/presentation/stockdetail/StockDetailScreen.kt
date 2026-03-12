@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.muzaffer.bistai.domain.repository.AnalysisSource
 import com.muzaffer.bistai.presentation.components.ChatBubble
 import com.muzaffer.bistai.ui.theme.*
 
@@ -79,7 +80,11 @@ fun StockDetailScreen(
                 // AI Tahmin Kartı — listenin en üstünde
                 item {
                     uiState.prediction?.let { pred ->
-                        AiPredictionCard(prediction = pred)
+                        AiPredictionCard(
+                            prediction   = pred,
+                            source       = uiState.analysisSource,
+                            ageMinutes   = uiState.analysisAgeMinutes
+                        )
                     }
                 }
 
@@ -303,13 +308,32 @@ private fun SymbolBadge(symbol: String) {
 // ─── AI Prediction Card ─────────────────────────────────────────────────────
 
 @Composable
-fun AiPredictionCard(prediction: com.muzaffer.bistai.domain.model.AiPrediction) {
+fun AiPredictionCard(
+    prediction: com.muzaffer.bistai.domain.model.AiPrediction,
+    source: AnalysisSource? = null,
+    ageMinutes: Long? = null
+) {
     val trend = prediction.trend
     val trendColor = when (trend) {
         com.muzaffer.bistai.domain.model.Trend.BULLISH -> BullishGreen
         com.muzaffer.bistai.domain.model.Trend.BEARISH -> BearishRed
         com.muzaffer.bistai.domain.model.Trend.NEUTRAL -> GoldAccent
     }
+    // Kaynak badge bilgisi
+    val (sourceEmoji, sourceLabel, sourceColor) = when (source) {
+        AnalysisSource.FIREBASE    -> Triple("🔥", "Firebase", BullishGreen)
+        AnalysisSource.LOCAL_CACHE -> Triple("💾", "Yerel önbellek", GoldAccent)
+        AnalysisSource.FRESH_API   -> Triple("✨", "Taze analiz", SlateBlue)
+        null                       -> Triple("", "", SlateBlue)
+    }
+    val ageText = ageMinutes?.let {
+        when {
+            it < 60   -> "$it dk önce"
+            it < 1440 -> "${it / 60} saat önce"
+            else      -> "${it / 1440} gün önce"
+        }
+    } ?: ""
+
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = NavyBlueSurface,
@@ -329,6 +353,22 @@ fun AiPredictionCard(prediction: com.muzaffer.bistai.domain.model.AiPrediction) 
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
+                }
+            }
+            // ── Kaynak Badge ─────────────────────────────────────────────
+            if (source != null) {
+                Surface(shape = RoundedCornerShape(8.dp), color = sourceColor.copy(alpha = 0.08f)) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(sourceEmoji, style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            if (ageText.isNotEmpty()) "$sourceLabel • $ageText" else sourceLabel,
+                            style = MaterialTheme.typography.labelSmall, color = sourceColor
+                        )
+                    }
                 }
             }
             HorizontalDivider(color = NavyBlueMedium)
