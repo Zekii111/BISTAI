@@ -10,16 +10,19 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+/** Yahoo Finance için özel Qualifier — Hilt'e hangi OkHttpClient'i vereceğini söyler */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class YfHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    /** Borsa API sağlayıcısı **/
     private const val BASE_URL = "https://api.bistai.com/v1/"
-
-    /** Yahoo Finance API base URL'i **/
     private const val YF_BASE_URL = "https://query1.finance.yahoo.com/"
 
     @Provides
@@ -29,6 +32,7 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
+    /** Genel API istemcisi */
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -36,17 +40,47 @@ object NetworkModule {
     ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            // API anahtarı header'ı — gerçek anahtarı BuildConfig.STOCK_API_KEY ile tanımla
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    // .addHeader("Authorization", "Bearer ${BuildConfig.STOCK_API_KEY}")
-                    .addHeader("Accept", "application/json")
-                    .build()
-                chain.proceed(request)
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .addHeader("Accept", "application/json")
+                        .build()
+                )
             }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+    /**
+     * Yahoo Finance için özel OkHttpClient.
+     * Yahoo Finance, browser olmayan User-Agent'ları bloklıyor.
+     */
+    @Provides
+    @Singleton
+    @YfHttpClient
+    fun provideYfOkHttpClient(
+        loggingInterceptor: HttpLoggingInterceptor
+    ): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .addHeader(
+                            "User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                            "Chrome/120.0.0.0 Safari/537.36"
+                        )
+                        .addHeader("Referer", "https://finance.yahoo.com")
+                        .addHeader("Accept", "application/json")
+                        .addHeader("Accept-Language", "en-US,en;q=0.9")
+                        .build()
+                )
+            }
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
 
     @Provides
@@ -65,10 +99,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideYfApiService(okHttpClient: OkHttpClient): com.muzaffer.bistai.data.remote.YfApiService =
+    fun provideYfApiService(
+        @YfHttpClient yfClient: OkHttpClient
+    ): com.muzaffer.bistai.data.remote.YfApiService =
         Retrofit.Builder()
             .baseUrl(YF_BASE_URL)
-            .client(okHttpClient)
+            .client(yfClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(com.muzaffer.bistai.data.remote.YfApiService::class.java)
