@@ -11,16 +11,42 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.muzaffer.bistai.domain.model.PortfolioItem
+import com.muzaffer.bistai.domain.repository.AuthRepository
+import com.muzaffer.bistai.domain.repository.PortfolioRepository
+
 // ─── UI State ────────────────────────────────────────────────────────────────
 
 data class PortfolioUiState(
     val stocks: List<Stock>          = emptyList(),
     val isLoading: Boolean           = false,
     val errorMessage: String?        = null,
-    val favoriteSymbols: Set<String> = emptySet()
+    val favoriteSymbols: Set<String> = emptySet(),
+    val portfolioItems: List<PortfolioItem> = emptyList(), // Kullanıcının cüzdanı
+    val isAuthenticated: Boolean     = false
 ) {
     val hasError: Boolean get() = errorMessage != null
     val isEmpty: Boolean  get() = !isLoading && stocks.isEmpty() && !hasError
+    
+    // Toplam Yatırım (Maliyet * Lot)
+    val totalInvestment: Double
+        get() = portfolioItems.sumOf { it.totalInvestment }
+        
+    // Güncel Varlık Değeri (Anlık Fiyat * Lot)
+    val currentTotalValue: Double
+        get() = portfolioItems.sumOf { item ->
+            val stock = stocks.find { it.symbol == item.symbol }
+            val currentPrice = stock?.currentPrice ?: item.averageCost
+            currentPrice * item.lotSize
+        }
+        
+    // Toplam Kâr / Zarar
+    val totalProfitLoss: Double
+        get() = currentTotalValue - totalInvestment
+    
+    // Yüzdelik Kâr / Zarar
+    val totalProfitLossPercentage: Double
+        get() = if (totalInvestment > 0) (totalProfitLoss / totalInvestment) * 100 else 0.0
 }
 
 // ─── ViewModel ───────────────────────────────────────────────────────────────
@@ -28,7 +54,9 @@ data class PortfolioUiState(
 @HiltViewModel
 class PortfolioViewModel @Inject constructor(
     private val getStocksUseCase: GetStocksUseCase,
-    private val watchlistRepository: WatchlistRepository
+    private val watchlistRepository: WatchlistRepository,
+    private val authRepository: AuthRepository,
+    private val portfolioRepository: PortfolioRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PortfolioUiState())
@@ -37,6 +65,7 @@ class PortfolioViewModel @Inject constructor(
     init {
         loadStocks()
         observeFavorites()
+        observeAuthAndPortfolio()
     }
 
     /** Hisse listesini yükler. */
@@ -71,6 +100,23 @@ class PortfolioViewModel @Inject constructor(
         viewModelScope.launch {
             watchlistRepository.getAllFavorites().collect { list ->
                 _uiState.update { it.copy(favoriteSymbols = list.map { e -> e.symbol }.toSet()) }
+            }
+        }
+    }
+
+    /** Kullanıcı girişini ve cüzdanını dinler. */
+    private fun observeAuthAndPortfolio() {
+        viewModelScope.launch {
+            authRepository.getAuthState().collectLatest { user ->
+                _uiState.update { it.copy(isAuthenticated = user != null) }
+                
+                if (user != null) {
+                    portfolioRepository.getPortfolio(user.uid).collect { items ->
+                        _uiState.update { it.copy(portfolioItems = items) }
+                    }
+                } else {
+                    _uiState.update { it.copy(portfolioItems = emptyList()) }
+                }
             }
         }
     }

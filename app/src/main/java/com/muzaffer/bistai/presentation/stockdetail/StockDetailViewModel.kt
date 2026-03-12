@@ -9,7 +9,9 @@ import com.muzaffer.bistai.data.remote.SimpleChat
 import com.muzaffer.bistai.domain.model.AiPrediction
 import com.muzaffer.bistai.domain.repository.AnalysisRepository
 import com.muzaffer.bistai.domain.repository.AnalysisSource
+import com.muzaffer.bistai.domain.repository.AuthRepository
 import com.muzaffer.bistai.domain.repository.NewsRepository
+import com.muzaffer.bistai.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,8 @@ class StockDetailViewModel @Inject constructor(
     private val aiService: AiApiService,
     private val newsRepository: NewsRepository,
     private val analysisRepository: AnalysisRepository,   // ← V2.1: Firebase → API → Room
+    private val authRepository: AuthRepository,
+    private val portfolioRepository: PortfolioRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -164,6 +168,32 @@ class StockDetailViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    /**
+     * Firestore Portföy Koleksiyonuna (users/{uid}/portfolio/{symbol}) hisseyi kaydeder.
+     */
+    fun addToPortfolio(lotSize: Double, averageCost: Double, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val user = authRepository.getCurrentUser()
+            if (user == null) {
+                onResult(false, "İşlem yapmak için giriş yapmalısınız.")
+                return@launch
+            }
+            
+            val item = com.muzaffer.bistai.domain.model.PortfolioItem(
+                symbol = uiState.value.symbol,
+                lotSize = lotSize,
+                averageCost = averageCost
+            )
+            
+            val result = portfolioRepository.addOrUpdatePortfolioItem(user.uid, item)
+            if (result.isSuccess) {
+                onResult(true, "Portföye başarıyla eklendi.")
+            } else {
+                onResult(false, result.exceptionOrNull()?.localizedMessage ?: "Kayıt sırasında hata oluştu.")
+            }
         }
     }
 }

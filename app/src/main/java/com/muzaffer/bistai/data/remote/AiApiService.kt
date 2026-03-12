@@ -61,33 +61,35 @@ class AiApiService @Inject constructor() {
         }.joinToString("\n")
 
         val prompt = """
-Sen BIST ve Küresel Piyasalar konusunda uzman bir "Medyum AI" analistisin.
-Haberlerin fiyat üzerindeki psikolojik ve teknik etkisini analiz et.
+Sen BIST ve global hisse senetleri konusunda son derece deneyimli, detaylara hakim, profesyonel ama hafif agresif/kesin konuşan bir "BISTAI Medyumu" (Baş Analist) rolündesin.
+Amacın, sağlanan haberlerin ve fiyatın ardındaki psikolojik ve teknik etkiyi analiz etmek.
+Eğer veriler veya haberler yetersizse (veya hiç haber yoksa), destekli atmak yerine DÜRÜST OL, "Veri yetersiz, yeterli analiz yapılamıyor" minvalinde bir cevap ver.
+Analiz dışında (örn. yemek tarifi, genel sohbet) hiçbir soruya cevap verme.
 
 VARLIK: $symbol${if (currentPrice > 0) " | Güncel Fiyat: $currentPrice" else ""}
 
 SON 5 HABER BAŞLIĞI:
-$newsBlock
+${if (newsBlock.isBlank()) "HABER BULUNAMADI" else newsBlock}
 
 MAKRO EKONOMİK DURUM:
 $macroContext
 
 GÖREV:
-Bu verileri bir finansal medyum gibi analiz ederek YALNIZCA aşağıdaki JSON formatında yanıt ver:
+Bu verileri bir finans medyumunun keskinliğiyle analiz et ve YALNIZCA aşağıdaki JSON formatında yanıt ver:
 {
   "trend": "BULLISH",
   "confidence": 72,
   "targetLow": 290.0,
   "targetHigh": 320.0,
-  "reasoning": "Analizin özeti burada (2-3 cümle, Türkçe)"
+  "reasoning": "Buraya analizi özetleyen, keskin ve profesyonel görüş bildiren 2-3 Türkçe cümle yaz."
 }
 
 KURALLAR:
 - trend: sadece BULLISH, BEARISH veya NEUTRAL olabilir
-- confidence: 0-100 arası sayı (kaç % emin olduğun)
-- targetLow/targetHigh: gerçekçi fiyat aralığı (0.0 ise bilinmiyor)
-- reasoning: Türkçe, 2-3 cümle, haberlerin fiyata etkisini açıkla
-- SADECE JSON döndür, başka hiçbir şey yazma
+- confidence: 0-100 arası sayı (kaç % emin olduğun). Veri yetersizse 0 yap.
+- targetLow/targetHigh: gerçekçi fiyat aralığı (0.0 ise bilinmiyor).
+- reasoning: 2-3 cümle. Sadece fiyatı ve haberi yorumla.
+- SADECE JSON döndür, başka hiçbir şey yazma. Markdown falan atma, JSON bloğu at.
         """.trimIndent()
 
         return try {
@@ -121,12 +123,13 @@ KURALLAR:
         } ?: ""
 
         val systemPrompt = """
-            Sen BISTAI adlı bir finans asistanısın. "$symbol" hissesi için yapılmış 
-            bir AI analizinin detaylarını kullanıcıyla tartışıyorsun.
+            Sen sert, agresif ve iddialı konuşan bir 'BISTAI Baş Analisti'sin. "$symbol" hissesi için en son yapılan AI analizinin detaylarını yorumluyorsun.
             $predContext
-            - Türkçe yanıt ver, kısa ve odaklı ol (max 200 kelime).
-            - Sadece bu analiz ve "$symbol" hakkında konuş.
-            - Yatırım tavsiyesi verme, analiz ve bilgi sun.
+            Kurallar:
+            1. Sadece finans ve "$symbol" ile ilgili konularda konuş. Borsa harici hiçbir soruyu cevaplama ("Ben sadece borsa konuşurum" vb. de).
+            2. Kesin, net ve profesyonel (ama hafif kibirli/iddialı) Türkçe yanıt ver (max 150-200 kelime).
+            3. Analizin güven puanına (confidence) göre iddialı konuş (örneğin %50'nin altındaysa "Piyasa şu an belirsiz, rüzgara göre yelken açamam" gibi şeyler söyle).
+            4. Yatırım tavsiyesi olmadığını (SPK kuralları gereği) kibarca hatırlat.
         """.trimIndent()
 
         return SimpleChat(
@@ -250,12 +253,14 @@ KURALLAR:
         }
     }
 
-    private fun parseApiError(code: Int, body: String): String = when (code) {
-        400  -> "Geçersiz istek. API anahtarınızı kontrol edin."
-        401, 403 -> "API_KEY_INVALID: Anahtar yetkisiz. aistudio.google.com'dan yeni key alın."
-        404  -> "API_MODEL_NOT_FOUND: '$MODEL' modeli bulunamadı."
-        429  -> "QUOTA_EXCEEDED: Kota aşıldı. Birkaç dakika bekleyin."
-        else -> "API Hatası ($code)"
+    private fun parseApiError(code: Int, body: String): String = when {
+        code == 400 -> "Geçersiz istek. Analiz için gerekli veriler eksik."
+        code == 401 || code == 403 -> "API_KEY_INVALID: Yetkisiz erişim. aistudio.google.com'dan geçerli bir API Key alın."
+        code == 404 -> "API_MODEL_NOT_FOUND: Gemini API modeli bulunamadı."
+        code == 429 -> "QUOTA_EXCEEDED: Kota aşıldı! Çok fazla analiz istediniz, lütfen 1 dakika bekleyin."
+        code >= 500 -> "Google Server Error: Sunucu tarafında hata oluştu ($code)."
+        body.contains("timeout") || body.contains("SocketTimeoutException") -> "Bağlantı Sorunu: İnternet yavaş veya kesik."
+        else -> "Bilinmeyen API Hatası ($code)"
     }
 
     // ─── Yardımcı ────────────────────────────────────────────────────────────

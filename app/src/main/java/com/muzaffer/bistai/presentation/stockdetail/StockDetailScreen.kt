@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -450,6 +451,98 @@ fun AiErrorCard(message: String, onRetry: () -> Unit) {
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = NavyBlueMedium, contentColor = LightSlate), shape = RoundedCornerShape(12.dp)) {
                 Text("Tekrar Dene", fontWeight = FontWeight.SemiBold)
             }
+        }
+    }
+}
+
+// ─── Portfolio Bottom Sheet ──────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PortfolioBottomSheet(
+    symbol: String,
+    onDismiss: () -> Unit,
+    onSave: (Double, Double) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var lotSize by remember { mutableStateOf("") }
+    var averageCost by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = NavyBlueSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = SlateBlue) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "Portföye Ekle: $symbol",
+                style = MaterialTheme.typography.titleLarge,
+                color = White,
+                fontWeight = FontWeight.Bold
+            )
+
+            OutlinedTextField(
+                value = lotSize,
+                onValueChange = { lotSize = it },
+                label = { Text("Lot (Adet)", color = SlateBlue) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BullishGreen,
+                    unfocusedBorderColor = NavyBlueMedium,
+                    focusedTextColor = White,
+                    unfocusedTextColor = White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = averageCost,
+                onValueChange = { averageCost = it },
+                label = { Text("Alış Maliyeti (₺)", color = SlateBlue) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BullishGreen,
+                    unfocusedBorderColor = NavyBlueMedium,
+                    focusedTextColor = White,
+                    unfocusedTextColor = White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    val lot = lotSize.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    val cost = averageCost.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (lot > 0 && cost >= 0) {
+                        onSave(lot, cost)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BullishGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    "Portföye Kaydet",
+                    color = PureBlack,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }

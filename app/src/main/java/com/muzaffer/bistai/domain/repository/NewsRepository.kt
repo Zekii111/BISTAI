@@ -7,6 +7,6 @@ import com.muzaffer.bistai.domain.model.NewsItem
  * Şu an FakeNewsDataSource kullanıyor — ileride gerçek News API'ye geçilecek.
  */
 interface NewsRepository {
-    fun getNewsForAsset(symbol: String): List<NewsItem>
-    fun getMacroContext(): String
+    suspend fun getNewsForAsset(symbol: String): List<NewsItem>
+    suspend fun getMacroContext(): String
 }

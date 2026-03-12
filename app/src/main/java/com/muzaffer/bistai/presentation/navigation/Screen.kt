@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * Uygulamadaki tüm ekran rotalarını tanımlayan sealed class.
  */
 sealed class Screen(val route: String) {
+    data object Login      : Screen("login")
     data object Portfolio  : Screen("portfolio")
     data object Favorites  : Screen("favorites")
     data object AiChat     : Screen("ai_chat")

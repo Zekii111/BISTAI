@@ -79,9 +79,9 @@ fun PortfolioScreen(
                     )
                     uiState.isEmpty   -> EmptyState()
                     else              -> StockList(
-                        stocks           = filteredStocks,
+                        uiState          = uiState, // PortfolioUiState'in tamamını gönderiyoruz
                         searchQuery      = searchQuery,
-                        favoriteSymbols  = uiState.favoriteSymbols,
+                        filteredStocks   = filteredStocks, // Arama sonuçları
                         onStockClick     = onStockClick,
                         onFavoriteToggle = { symbol, name ->
                             viewModel.toggleFavorite(symbol, name)
@@ -153,25 +153,40 @@ private fun PortfolioTopBar(onRefreshClick: () -> Unit) {
     }
 }
 
-// ─── Stock List ───────────────────────────────────────────────────────────────
+// ─── Stock List & Dashboard ───────────────────────────────────────────────────
 
 @Composable
 private fun StockList(
-    stocks: List<Stock>,
+    uiState: PortfolioUiState,
     searchQuery: String,
-    favoriteSymbols: Set<String>,
+    filteredStocks: List<Stock>,
     onStockClick: (String) -> Unit,
     onFavoriteToggle: (String, String) -> Unit
 ) {
+    val stocks = filteredStocks
+    
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Eğer arama yapılmıyorsa ve kullanıcı giriş yaptıysa cüzdan özetini en üstte göster
+        if (searchQuery.isBlank() && uiState.isAuthenticated) {
+            item {
+                PortfolioSummaryCard(
+                    totalValue = uiState.currentTotalValue,
+                    totalInvestment = uiState.totalInvestment,
+                    profitLoss = uiState.totalProfitLoss,
+                    profitLossPercentage = uiState.totalProfitLossPercentage
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+        // Portföydeki Hisse Sayısı veya Arama Sonucu
         item {
             val label = if (searchQuery.isNotBlank())
                 "\"$searchQuery\" için ${stocks.size} sonuç"
             else
-                "Portföy  •  ${stocks.size} Hisse"
+                "Tüm Piyasalar  •  ${stocks.size} Hisse"
             Text(label, style = MaterialTheme.typography.labelMedium, color = SlateBlue,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         }
@@ -184,10 +199,14 @@ private fun StockList(
             }
         } else {
             items(stocks, key = { it.symbol }) { stock ->
+                // Bu hisse cüzdanda var mı kontrolü
+                val portfolioItem = uiState.portfolioItems.find { it.symbol == stock.symbol }
+                
                 AnimatedVisibility(visible = true, enter = fadeIn() + slideInVertically()) {
                     StockCard(
                         stock = stock,
-                        isFavorite = stock.symbol in favoriteSymbols,
+                        isFavorite = stock.symbol in uiState.favoriteSymbols,
+                        portfolioItem = portfolioItem, // Lot miktarını Badge içinde göstermek için
                         onClick = { onStockClick(stock.symbol) },
                         onFavoriteClick = { onFavoriteToggle(stock.symbol, stock.name) }
                     )
@@ -197,12 +216,72 @@ private fun StockList(
     }
 }
 
-// ─── Stock Card (Kalp ikonlu) ────────────────────────────────────────────────
+// ─── Portfolio Summary Card (Cüzdan Özeti) ──────────────────────────────────
+
+@Composable
+fun PortfolioSummaryCard(
+    totalValue: Double,
+    totalInvestment: Double,
+    profitLoss: Double,
+    profitLossPercentage: Double
+) {
+    val isProfit = profitLoss >= 0
+    val changeColor = if (isProfit) BullishGreen else BearishRed
+    val sign = if (isProfit) "+" else ""
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = NavyBlueSurface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Cüzdan Özeti", style = MaterialTheme.typography.labelMedium, color = SlateBlue)
+            
+            Column {
+                Text(
+                    "₺%.2f".format(totalValue),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = White,
+                    fontWeight = FontWeight.Black
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "$sign₺%.2f".format(profitLoss),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = changeColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Surface(shape = RoundedCornerShape(6.dp), color = changeColor.copy(alpha = 0.15f)) {
+                        Text(
+                            "$sign%.2f%%".format(profitLossPercentage),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = changeColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            
+            HorizontalDivider(color = NavyBlueMedium)
+            
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Text("Yatırılan", style = MaterialTheme.typography.labelSmall, color = SlateBlue)
+                    Text("₺%.2f".format(totalInvestment), style = MaterialTheme.typography.labelLarge, color = LightSlate)
+                }
+            }
+        }
+    }
+}
+
+// ─── Stock Card (Sahip Olunan Lot Badge'li) ────────────────────────────────────────────────
 
 @Composable
 fun StockCard(
     stock: Stock,
     isFavorite: Boolean = false,
+    portfolioItem: com.muzaffer.bistai.domain.model.PortfolioItem? = null,
     onClick: () -> Unit = {},
     onFavoriteClick: () -> Unit = {}
 ) {
@@ -220,9 +299,22 @@ fun StockCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Sol: Sembol & İsim
+            // Sol: Sembol & İsim & Varsa Lot Sayısı
             Column(modifier = Modifier.weight(1f)) {
-                Text(stock.symbol, style = MaterialTheme.typography.titleMedium, color = White, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stock.symbol, style = MaterialTheme.typography.titleMedium, color = White, fontWeight = FontWeight.Bold)
+                    
+                    if (portfolioItem != null && portfolioItem.lotSize > 0) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = SlateBlue.copy(alpha = 0.2f)) {
+                            Text(
+                                "${portfolioItem.lotSize} Lot", 
+                                style = MaterialTheme.typography.labelSmall, 
+                                color = LightSlate, 
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Text(stock.name, style = MaterialTheme.typography.bodyMedium, color = SlateBlue, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 

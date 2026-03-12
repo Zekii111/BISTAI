@@ -16,11 +16,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    /**
-     * Gerçek API base URL'i. Borsa API sağlayıcısı (Finans API, ISYATIRIM, vb.)
-     * entegre edildiğinde burası güncellenir.
-     */
+    /** Borsa API sağlayıcısı **/
     private const val BASE_URL = "https://api.bistai.com/v1/"
+
+    /** Yahoo Finance API base URL'i **/
+    private const val YF_BASE_URL = "https://query1.finance.yahoo.com/"
 
     @Provides
     @Singleton
@@ -62,4 +62,14 @@ object NetworkModule {
     @Singleton
     fun provideStockApiService(retrofit: Retrofit): StockApiService =
         retrofit.create(StockApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideYfApiService(okHttpClient: OkHttpClient): com.muzaffer.bistai.data.remote.YfApiService =
+        Retrofit.Builder()
+            .baseUrl(YF_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(com.muzaffer.bistai.data.remote.YfApiService::class.java)
 }
