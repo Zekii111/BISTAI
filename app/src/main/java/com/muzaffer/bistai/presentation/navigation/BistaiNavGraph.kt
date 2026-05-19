@@ -29,7 +29,7 @@ fun BistaiNavGraph(
     val authState by authViewModel.authState.collectAsState()
 
     // Eğer uygulama açıldığında kullanıcı varsa direkt portföye geç, yoksa logine dön
-    val startDestination = if (authState.isLoading) {
+    val startDestination = Screen.Portfolio.route // if (authState.isLoading) {
         Screen.Login.route // Yüklenirken de login'de beklet, state değişince LaunchedEffect halleder
     } else if (authState.user != null) {
         Screen.Portfolio.route
