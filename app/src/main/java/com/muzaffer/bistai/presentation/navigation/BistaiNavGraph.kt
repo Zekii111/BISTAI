@@ -53,14 +53,6 @@ fun BistaiNavGraph(
 
         // ── Ana ekran: 3 sekme + HorizontalPager ──────────────────────
         composable(Screen.Portfolio.route) {
-            // Kullanıcı bu ekrandayken çıkış yaparsa Logine at
-            LaunchedEffect(authState.user) {
-                if (authState.user == null && !authState.isLoading) {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Portfolio.route) { inclusive = true }
-                    }
-                }
-            }
             MainTabsScreen(
                 onStockClick = { symbol ->
                     navController.navigate(Screen.StockDetail.createRoute(symbol))
